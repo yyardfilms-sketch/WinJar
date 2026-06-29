@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>WINJAR ⚽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0A0D12; --panel:#12171F; --card:#171D27; --line:#242C38;
+    --txt:#EAEEF3; --muted:#7E8B99;
+    --green:#15D27C; --green-dim:#0F8F55; --odd:#1B2330;
+    --fun:#F2A93B; --save:#2FD3A5; --live:#FF5147;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);}
+  body{font-family:'Heebo',system-ui,sans-serif;color:var(--txt);-webkit-font-smoothing:antialiased;
+    max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:140px;position:relative;}
+  .tnum{font-variant-numeric:tabular-nums;}
+
+  /* top bar */
+  .topbar{position:sticky;top:0;z-index:30;background:rgba(10,13,18,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{font-weight:900;font-size:20px;letter-spacing:.5px;}
+  .brand b{color:var(--green);}
+  .wallets{display:flex;gap:8px;}
+  .wchip{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:6px 10px;font-weight:800;font-size:13px;}
+  .wchip.fun{color:var(--fun);} .wchip.save{color:var(--save);}
+
+  .screen{padding:14px;display:none;}
+  .screen.active{display:block;}
+  h3.sec{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 2px 10px;}
+
+  /* league chips */
+  .leagues{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;margin-bottom:4px;scrollbar-width:none;}
+  .leagues::-webkit-scrollbar{display:none;}
+  .lchip{flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--muted);
+    border-radius:999px;padding:8px 14px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap;}
+  .lchip.on{background:var(--green);color:#04130C;border-color:var(--green);}
+
+  /* match card */
+  .mcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:11px;}
+  .mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+  .league-tag{font-size:11px;font-weight:800;color:var(--green);letter-spacing:.4px;}
+  .mtime{font-size:11.5px;color:var(--muted);}
+  .teams{margin-bottom:11px;}
+  .team{font-weight:700;font-size:15.5px;line-height:1.45;}
+  .oddsrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .oddbtn{background:var(--odd);border:1px solid var(--line);border-radius:11px;padding:9px 4px 8px;
+    cursor:pointer;color:var(--txt);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;
+    transition:transform .07s;}
+  .oddbtn:active{transform:scale(.96);}
+  .oddbtn .lab{font-size:11px;color:var(--muted);font-weight:700;}
+  .oddbtn .val{font-size:18px;font-weight:900;}
+  .oddbtn.sel{background:var(--green);border-color:var(--green);}
+  .oddbtn.sel .lab{color:#0a3b25;} .oddbtn.sel .val{color:#04130C;}
+
+  .hint{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:18px 16px;color:var(--muted);
+    font-size:14px;line-height:1.6;text-align:center;}
+  .hint code{background:#0c1118;color:var(--green);padding:2px 7px;border-radius:6px;font-size:13px;}
+  .status{font-size:13.5px;padding:10px 12px;border-radius:11px;margin:10px 0;line-height:1.5;}
+  .status.err{background:#2a1414;color:#ff8a82;border:1px solid #4a1f1f;}
+  .status.ok{background:#0f2018;color:var(--green);border:1px solid #1c3a2a;}
+
+  /* my bets */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:14px;text-align:center;margin-bottom:6px;}
+  .stat-v{font-weight:900;font-size:23px;}
+  .stat-l{font-size:11px;color:var(--muted);margin-top:1px;}
+  .bet{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:10px;}
+  .bet.settled{opacity:.72;}
+  .bet-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;}
+  .bet-desc{font-weight:700;font-size:15px;line-height:1.35;}
+  .bet-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+  .bet-odds{font-weight:900;font-size:18px;background:#0c1118;border-radius:9px;padding:5px 10px;white-space:nowrap;}
+  .resolve{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .rb{border-radius:10px;padding:11px;font-weight:800;font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:#0c1118;color:var(--txt);}
+  .rb.win{background:var(--green);color:#04130C;border-color:var(--green);}
+  .rb.lose{background:transparent;color:var(--save);border-color:var(--save);}
+  .tag{font-size:12px;font-weight:800;padding:3px 9px;border-radius:8px;}
+  .tag.won{background:#0f2018;color:var(--green);} .tag.lost{background:#10221c;color:var(--save);}
+
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:26px 10px;line-height:1.6;}
+
+  /* goals */
+  .jar{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:11px;}
+  .jar-h{display:flex;justify-content:space-between;align-items:baseline;}
+  .jar-name{font-weight:800;font-size:15px;}
+  .jar-val{font-weight:900;font-size:26px;}
+  .jar-val.fun{color:var(--fun);} .jar-val.save{color:var(--save);}
+  .jar-goal{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .bar{height:9px;border-radius:99px;background:#0c1118;margin-top:11px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1);}
+  .banner{display:flex;align-items:center;gap:9px;border-radius:13px;padding:13px;margin-bottom:11px;font-weight:700;font-size:14px;line-height:1.4;}
+  .banner.fun{background:#241a0c;color:var(--fun);border:1px solid #3a2a12;}
+  .banner.save{background:#0f221c;color:var(--save);border:1px solid #1c3a30;}
+  .banner button{margin-inline-start:auto;border:none;border-radius:9px;padding:8px 13px;font-weight:800;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .banner.fun button{background:var(--fun);color:#241a0c;} .banner.save button{background:var(--save);color:#0f221c;}
+  label.fl{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;font-weight:700;}
+  .field{margin-bottom:11px;} .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  input,select{width:100%;background:#0c1118;border:1px solid var(--line);border-radius:11px;padding:11px 12px;
+    font-size:16px;font-family:inherit;color:var(--txt);outline:none;}
+  input:focus,select:focus{border-color:var(--green);}
+  .ghost{background:none;border:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;padding:8px 2px;}
+
+  /* bet slip */
+  .slip-fab{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);z-index:40;width:calc(100% - 28px);max-width:452px;
+    background:var(--green);color:#04130C;border:none;border-radius:13px;padding:13px;font-family:inherit;font-weight:900;
+    font-size:15px;display:none;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  .slip-fab.show{display:flex;}
+  .slip-fab .cnt{background:#04130C;color:var(--green);border-radius:8px;padding:2px 9px;font-size:13px;}
+
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;}
+  .sheet-bg.show{display:block;}
+  .sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:51;width:100%;max-width:480px;
+    background:var(--panel);border-top-left-radius:20px;border-top-right-radius:20px;padding:16px 16px 22px;
+    border-top:1px solid var(--line);transform:translateX(-50%) translateY(100%);transition:transform .28s ease;max-height:80vh;overflow-y:auto;}
+  .sheet.show{transform:translateX(-50%) translateY(0);}
+  .sheet-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .sheet-h h3{margin:0;font-size:17px;font-weight:900;}
+  .sel-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .sel-item .x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit;line-height:1;}
+  .slip-sum{background:#0c1118;border-radius:12px;padding:12px;font-size:13.5px;color:var(--muted);line-height:1.7;margin:4px 0 12px;}
+  .slip-sum b{color:var(--txt);font-weight:800;}
+  .place{width:100%;background:var(--green);color:#04130C;border:none;border-radius:13px;padding:15px;font-weight:900;font-size:16px;font-family:inherit;cursor:pointer;}
+  .place:disabled{opacity:.4;}
+
+  /* bottom nav */
+  .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:45;
+    background:rgba(10,13,18,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+    display:grid;grid-template-columns:repeat(3,1fr);}
+  .navb{background:none;border:none;color:var(--muted);font-family:inherit;font-size:11.5px;font-weight:700;
+    padding:10px 4px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-top:2px solid transparent;}
+  .navb .ic{font-size:19px;line-height:1;}
+  .navb.on{color:var(--green);border-top-color:var(--green);}
+
+  .toast{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);background:#04130C;color:var(--green);
+    border:1px solid var(--green-dim);padding:11px 18px;border-radius:12px;font-weight:800;font-size:14px;z-index:60;
+    opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  @media (prefers-reduced-motion: reduce){.bar-fill,.sheet,.toast{transition:none;}}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand">WIN<b>JAR</b> ⚽</div>
+    <div class="wallets">
+      <div class="wchip fun">🎁 <span id="wFun" class="tnum">0</span></div>
+      <div class="wchip save">🐷 <span id="wSave" class="tnum">0</span></div>
+    </div>
+  </div>
+
+  <!-- MATCHES -->
+  <div class="screen active" id="scrMatches">
+    <div class="leagues" id="leagues"></div>
+    <div id="liveStatus"></div>
+    <div id="matches"></div>
+  </div>
+
+  <!-- MY BETS -->
+  <div class="screen" id="scrBets">
+    <div class="stats">
+      <div><div class="stat-v" id="stCount">0</div><div class="stat-l">ניחושים</div></div>
+      <div><div class="stat-v" id="stRate" style="color:var(--green)">0%</div><div class="stat-l">הצלחה</div></div>
+      <div><div class="stat-v" id="stWL" style="color:var(--save)">0-0</div><div class="stat-l">נצח-הפסד</div></div>
+    </div>
+    <h3 class="sec">פתוחים</h3>
+    <div id="pending"></div>
+    <h3 class="sec">היסטוריה</h3>
+    <div id="history"></div>
+  </div>
+
+  <!-- GOALS -->
+  <div class="screen" id="scrGoals">
+    <div id="goalBanners"></div>
+    <div class="jar">
+      <div class="jar-h"><div class="jar-name">🎁 קופת כיף</div><div class="jar-val fun"><span id="gFunVal" class="tnum">0</span> ₪</div></div>
+      <div class="jar-goal" id="gFunGoalT">פינוק ב־500 ₪</div>
+      <div class="bar"><div class="bar-fill" id="gFunBar" style="background:var(--fun);width:0%"></div></div>
+    </div>
+    <div class="jar">
+      <div class="jar-h"><div class="jar-name">🐷 חיסכון</div><div class="jar-val save"><span id="gSaveVal" class="tnum">0</span> ₪</div></div>
+      <div class="jar-goal" id="gSaveGoalT">יעד: 1,000 ₪</div>
+      <div class="bar"><div class="bar-fill" id="gSaveBar" style="background:var(--save);width:0%"></div></div>
+    </div>
+    <h3 class="sec">הגדרות יעדים</h3>
+    <div class="jar">
+      <div class="field"><label class="fl">הפינוק שמחכה לך</label><input id="inTreat" type="text" /></div>
+      <div class="row2">
+        <div class="field"><label class="fl">פינוק ב־(₪)</label><input id="inFun" type="number" /></div>
+        <div class="field"><label class="fl">יעד חיסכון (₪)</label><input id="inSave" type="number" /></div>
+      </div>
+    </div>
+    <button class="ghost" id="resetBtn">↺ אפס הכל</button>
+  </div>
+
+  <!-- bet slip -->
+  <button class="slip-fab" id="slipFab"><span>סל ההימורים <span class="cnt" id="slipCnt">0</span></span><span>פתח ←</span></button>
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-h"><h3>סל ההימורים</h3><button class="ghost" id="sheetClose">סגור ✕</button></div>
+    <div id="slipItems"></div>
+    <div class="field"><label class="fl">סכום לכל ניחוש (₪)</label><input id="slipStake" type="number" inputmode="decimal" value="50" /></div>
+    <div class="slip-sum" id="slipSum"></div>
+    <button class="place" id="placeBtn">הצב ניחושים</button>
+  </div>
+
+  <!-- nav -->
+  <div class="nav">
+    <button class="navb on" data-scr="scrMatches"><span class="ic">⚽</span>משחקים</button>
+    <button class="navb" data-scr="scrBets"><span class="ic">🎫</span>ההימורים שלי</button>
+    <button class="navb" data-scr="scrGoals"><span class="ic">🎯</span>יעדים</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   הדבק כאן את מפתח ה-API שלך מ-the-odds-api.com (בין הגרשיים).
+   זהו — שורה אחת וזה עובד. ============================================================ */
+var API_KEY = "947dffb15ac249ce1355bb02d4bd27e4";
+/* ============================================================ */
+
+var LEAGUES = [
+  {key:"soccer_epl", name:"פרמייר ליג"},
+  {key:"soccer_spain_la_liga", name:"לה ליגה"},
+  {key:"soccer_italy_serie_a", name:"סריה א'"},
+  {key:"soccer_germany_bundesliga", name:"בונדסליגה"},
+  {key:"soccer_france_ligue_one", name:"ליג 1"},
+  {key:"soccer_uefa_champs_league", name:"ליגת האלופות"},
+  {key:"soccer_israel_ligat_haal", name:"ליגת העל"}
+];
+var REGION = "eu";
+
+var KEY = "winjar_v1";
+var DEFAULT = { predictions:[], funBalance:0, savingsBalance:0,
+  goal:{funAmount:500, treat:"פינוק שבחרת", saveAmount:1000}, redemptions:[] };
+var state = load();
+var slip = [];           // [{matchId, desc, odds}]
+var curLeague = LEAGUES[0].key;
+
+function load(){ try{var r=localStorage.getItem(KEY); if(r) return Object.assign({},DEFAULT,JSON.parse(r));}catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function nis(n){ return new Intl.NumberFormat("he-IL",{maximumFractionDigits:0}).format(Math.round(n||0)); }
+function el(id){ return document.getElementById(id); }
+function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+function toast(msg){ var t=el("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("show");},1800); }
+
+/* ---------- render ---------- */
+function renderWallets(){
+  el("wFun").textContent = nis(state.funBalance);
+  el("wSave").textContent = nis(state.savingsBalance);
+}
+
+function renderGoals(){
+  var g=state.goal;
+  el("gFunVal").textContent=nis(state.funBalance);
+  el("gSaveVal").textContent=nis(state.savingsBalance);
+  el("gFunGoalT").textContent="פינוק ב־"+nis(g.funAmount)+" ₪";
+  el("gSaveGoalT").textContent="יעד: "+nis(g.saveAmount)+" ₪";
+  el("gFunBar").style.width=Math.min(100,g.funAmount?state.funBalance/g.funAmount*100:0)+"%";
+  el("gSaveBar").style.width=Math.min(100,g.saveAmount?state.savingsBalance/g.saveAmount*100:0)+"%";
+  var b="";
+  if(g.funAmount>0 && state.funBalance>=g.funAmount)
+    b+='<div class="banner fun">✨ <span>הגעת ל'+nis(g.funAmount)+' ₪ — מגיע לך '+esc(g.treat)+'!</span><button data-act="redeem">ממש</button></div>';
+  if(g.saveAmount>0 && state.savingsBalance>=g.saveAmount)
+    b+='<div class="banner save">🐷 <span>חסכת '+nis(g.saveAmount)+' ₪. הכסף נשאר שלך.</span><button data-act="bump">העלה יעד</button></div>';
+  el("goalBanners").innerHTML=b;
+}
+
+function renderBets(){
+  var pend=state.predictions.filter(function(p){return p.status==="pending";});
+  el("pending").innerHTML = pend.length? pend.map(function(p){
+    return '<div class="bet"><div class="bet-top"><div>'
+      +'<div class="bet-desc">'+esc(p.desc)+'</div>'
+      +'<div class="bet-meta">'+nis(p.stake)+' ₪ · יחס '+p.odds+' · החזר אפשרי '+nis(p.stake*p.odds)+' ₪</div></div>'
+      +'<div class="bet-odds tnum">'+p.odds+'</div></div>'
+      +'<div class="resolve"><button class="rb win" data-win="'+p.id+'">✓ ניצחתי</button>'
+      +'<button class="rb lose" data-lose="'+p.id+'">✕ הפסדתי</button></div></div>';
+  }).join("") : '<div class="empty">אין ניחושים פתוחים.<br>עבור ל"משחקים" ובחר יחס.</div>';
+
+  var settled=state.predictions.filter(function(p){return p.status!=="pending";});
+  var hist="";
+  state.redemptions.forEach(function(r){
+    hist+='<div class="bet settled"><div class="bet-top"><div><div class="bet-desc">🎁 מימשת: '+esc(r.treat)+'</div>'
+      +'<div class="bet-meta">−'+nis(r.amount)+' ₪ מקופת הכיף</div></div></div></div>';
+  });
+  settled.slice(0,40).forEach(function(p){
+    var won=p.status==="won";
+    hist+='<div class="bet settled"><div class="bet-top"><div><div class="bet-desc">'+esc(p.desc)+'</div>'
+      +'<div class="bet-meta">'+(won?("+"+nis(p.payout)+" ₪ לקופת הכיף"):("+"+nis(p.stake)+" ₪ לחיסכון"))+'</div></div>'
+      +'<span class="tag '+(won?"won":"lost")+'">'+(won?"זכייה":"לחיסכון")+'</span></div></div>';
+  });
+  el("history").innerHTML = hist || '<div class="empty">עוד אין היסטוריה.</div>';
+
+  var wins=settled.filter(function(p){return p.status==="won";}).length;
+  var losses=settled.filter(function(p){return p.status==="lost";}).length;
+  el("stCount").textContent=settled.length;
+  el("stRate").textContent=(settled.length?Math.round(wins/settled.length*100):0)+"%";
+  el("stWL").textContent=wins+"-"+losses;
+}
+
+function renderAll(){ renderWallets(); renderGoals(); renderBets(); save(); }
+
+/* ---------- predictions ---------- */
+function resolve(id,won){
+  state.predictions=state.predictions.map(function(p){
+    if(p.id!==id||p.status!=="pending") return p;
+    if(won){var pay=Math.round(p.stake*p.odds); state.funBalance+=pay; return Object.assign({},p,{status:"won",payout:pay,resolvedAt:Date.now()});}
+    state.savingsBalance+=p.stake; return Object.assign({},p,{status:"lost",resolvedAt:Date.now()});
+  });
+  renderAll();
+}
+
+/* ---------- bet slip ---------- */
+function inSlip(matchId){ return slip.findIndex(function(s){return s.matchId===matchId;}); }
+function toggleSelection(matchId, desc, odds){
+  var i=inSlip(matchId);
+  if(i>=0 && slip[i].desc===desc){ slip.splice(i,1); }       // tapping same outcome removes
+  else if(i>=0){ slip[i]={matchId:matchId,desc:desc,odds:odds}; } // switch outcome of same match
+  else { slip.push({matchId:matchId,desc:desc,odds:odds}); }
+  renderSlip(); markSelectedOdds();
+}
+function renderSlip(){
+  el("slipCnt").textContent=slip.length;
+  el("slipFab").classList.toggle("show", slip.length>0);
+  el("slipItems").innerHTML = slip.map(function(s,idx){
+    return '<div class="sel-item"><div><div class="bet-desc">'+esc(s.desc)+'</div>'
+      +'<div class="bet-meta">יחס '+s.odds+'</div></div>'
+      +'<button class="x" data-rm="'+idx+'">✕</button></div>';
+  }).join("");
+  var stake=parseFloat(el("slipStake").value)||0;
+  var totalFun=slip.reduce(function(a,s){return a+stake*parseFloat(s.odds);},0);
+  el("slipSum").innerHTML = slip.length
+    ? 'כל ניחוש בנפרד, '+nis(stake)+' ₪ כל אחד.<br>אם הכל ינצח: <b>+'+nis(totalFun)+' ₪</b> לקופת הכיף.<br>כל הפסד: <b>+'+nis(stake)+' ₪</b> לחיסכון.'
+    : 'הסל ריק.';
+  el("placeBtn").disabled = slip.length===0 || !(stake>0);
+}
+function openSheet(){ el("sheetBg").classList.add("show"); el("sheet").classList.add("show"); }
+function closeSheet(){ el("sheetBg").classList.remove("show"); el("sheet").classList.remove("show"); }
+function placeBets(){
+  var stake=parseFloat(el("slipStake").value)||0;
+  if(!(stake>0)||slip.length===0) return;
+  slip.forEach(function(s){
+    state.predictions.unshift({id:uid(),desc:s.desc,stake:stake,odds:parseFloat(s.odds),status:"pending",createdAt:Date.now()});
+  });
+  var n=slip.length; slip=[]; renderSlip(); markSelectedOdds(); renderAll(); closeSheet();
+  switchScreen("scrBets"); toast(n>1? n+" ניחושים הוצבו":"ניחוש הוצב");
+}
+
+/* ---------- live odds ---------- */
+function renderLeagues(){
+  el("leagues").innerHTML = LEAGUES.map(function(l){
+    return '<button class="lchip'+(l.key===curLeague?" on":"")+'" data-lg="'+l.key+'">'+esc(l.name)+'</button>';
+  }).join("");
+}
+function avgOdds(match){
+  var sums={},counts={};
+  (match.bookmakers||[]).forEach(function(bk){(bk.markets||[]).forEach(function(mk){
+    if(mk.key!=="h2h") return;
+    (mk.outcomes||[]).forEach(function(o){ sums[o.name]=(sums[o.name]||0)+o.price; counts[o.name]=(counts[o.name]||0)+1; });
+  });});
+  var out={}; Object.keys(sums).forEach(function(n){out[n]=sums[n]/counts[n];}); return out;
+}
+function markSelectedOdds(){
+  var btns=document.querySelectorAll(".oddbtn");
+  for(var i=0;i<btns.length;i++){
+    var b=btns[i], mid=b.getAttribute("data-mid"), desc=b.getAttribute("data-desc");
+    var idx=inSlip(mid);
+    b.classList.toggle("sel", idx>=0 && slip[idx].desc===desc);
+  }
+}
+function leagueName(k){ for(var i=0;i<LEAGUES.length;i++) if(LEAGUES[i].key===k) return LEAGUES[i].name; return ""; }
+
+async function loadMatches(){
+  var st=el("liveStatus");
+  if(!API_KEY || API_KEY==="PASTE_YOUR_KEY_HERE"){
+    el("matches").innerHTML='<div class="hint">כדי לטעון משחקים אמיתיים, פתח את הקובץ בעורך טקסט והדבק את מפתח ה-API שלך בשורה <code>var API_KEY = "..."</code> בראש הקוד.<br><br>מפתח חינמי משיגים ב-the-odds-api.com (500 בקשות בחודש).</div>';
+    st.innerHTML=""; return;
+  }
+  st.className="status"; st.textContent="טוען משחקים…"; el("matches").innerHTML="";
+  var url="https://api.the-odds-api.com/v4/sports/"+curLeague+"/odds/?apiKey="+encodeURIComponent(API_KEY)+"&regions="+REGION+"&markets=h2h&oddsFormat=decimal";
+  try{
+    var res=await fetch(url);
+    if(!res.ok){
+      var m="שגיאה "+res.status+".";
+      if(res.status===401) m="המפתח לא תקין. בדוק את ה-API_KEY בקוד.";
+      if(res.status===422) m="הליגה הזו לא זמינה כרגע. נסה אחרת.";
+      if(res.status===429) m="נגמרו הבקשות החינמיות לחודש.";
+      st.className="status err"; st.textContent=m; return;
+    }
+    var data=await res.json();
+    var rem=res.headers.get("x-requests-remaining");
+    if(!Array.isArray(data)||data.length===0){ st.className="status"; st.textContent="אין משחקים קרובים ב"+leagueName(curLeague)+"."; return; }
+    st.className="status ok"; st.textContent=data.length+" משחקים"+(rem?" · נשארו "+rem+" בקשות החודש":"");
+    renderMatches(data);
+  }catch(err){
+    st.className="status err";
+    st.innerHTML='הטעינה נכשלה. אם אתה צופה בתוך הצ\'אט — <b>הורד את הקובץ ופתח בדפדפן</b>. אחרת בדוק מפתח/רשת.';
+  }
+}
+function renderMatches(data){
+  el("matches").innerHTML = data.slice(0,25).map(function(m){
+    var od=avgOdds(m);
+    var t=new Date(m.commence_time);
+    var when=t.toLocaleString("he-IL",{weekday:"short",day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"});
+    function ob(name,lab){
+      if(!od[name]) return '<div class="oddbtn" style="opacity:.4"><span class="lab">'+lab+'</span><span class="val">–</span></div>';
+      var price=od[name].toFixed(2);
+      var desc=m.home_team+" נגד "+m.away_team+" · "+(name==="Draw"?"תיקו":name);
+      return '<button class="oddbtn" data-mid="'+esc(m.id)+'" data-desc="'+esc(desc)+'" data-odds="'+price+'">'
+        +'<span class="lab">'+lab+'</span><span class="val tnum">'+price+'</span></button>';
+    }
+    return '<div class="mcard"><div class="mtop"><span class="league-tag">'+esc(leagueName(curLeague))+'</span><span class="mtime">'+when+'</span></div>'
+      +'<div class="teams"><div class="team">'+esc(m.home_team)+'</div><div class="team">'+esc(m.away_team)+'</div></div>'
+      +'<div class="oddsrow">'+ob(m.home_team,"1")+ob("Draw","X")+ob(m.away_team,"2")+'</div></div>';
+  }).join("");
+  markSelectedOdds();
+}
+
+/* ---------- navigation ---------- */
+function switchScreen(id){
+  var s=document.querySelectorAll(".screen"); for(var i=0;i<s.length;i++) s[i].classList.toggle("active", s[i].id===id);
+  var n=document.querySelectorAll(".navb"); for(var j=0;j<n.length;j++) n[j].classList.toggle("on", n[j].getAttribute("data-scr")===id);
+  window.scrollTo(0,0);
+}
+
+/* ---------- wiring ---------- */
+function init(){
+  renderLeagues();
+  el("inTreat").value=state.goal.treat; el("inFun").value=state.goal.funAmount; el("inSave").value=state.goal.saveAmount;
+  renderAll(); renderSlip();
+  loadMatches();
+
+  el("leagues").addEventListener("click",function(e){var b=e.target.closest("[data-lg]"); if(!b)return; curLeague=b.getAttribute("data-lg"); renderLeagues(); loadMatches();});
+
+  el("matches").addEventListener("click",function(e){
+    var b=e.target.closest(".oddbtn[data-mid]"); if(!b)return;
+    toggleSelection(b.getAttribute("data-mid"), b.getAttribute("data-desc"), b.getAttribute("data-odds"));
+  });
+
+  el("slipFab").addEventListener("click",openSheet);
+  el("sheetClose").addEventListener("click",closeSheet);
+  el("sheetBg").addEventListener("click",closeSheet);
+  el("slipStake").addEventListener("input",renderSlip);
+  el("slipItems").addEventListener("click",function(e){var b=e.target.closest("[data-rm]"); if(!b)return; slip.splice(parseInt(b.getAttribute("data-rm"),10),1); renderSlip(); markSelectedOdds();});
+  el("placeBtn").addEventListener("click",placeBets);
+
+  el("pending").addEventListener("click",function(e){
+    var w=e.target.closest("[data-win]"), l=e.target.closest("[data-lose]");
+    if(w) resolve(w.getAttribute("data-win"),true);
+    if(l) resolve(l.getAttribute("data-lose"),false);
+  });
+
+  el("goalBanners").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    if(b.getAttribute("data-act")==="redeem"){ state.redemptions.unshift({id:uid(),treat:state.goal.treat,amount:state.goal.funAmount,at:Date.now()}); state.funBalance-=state.goal.funAmount; renderAll(); toast("פינוק מומש 🎁"); }
+    if(b.getAttribute("data-act")==="bump"){ state.goal.saveAmount+=1000; el("inSave").value=state.goal.saveAmount; renderAll(); }
+  });
+
+  ["inTreat","inFun","inSave"].forEach(function(id){ el(id).addEventListener("input",function(){
+    state.goal.treat=el("inTreat").value; state.goal.funAmount=parseFloat(el("inFun").value)||0; state.goal.saveAmount=parseFloat(el("inSave").value)||0; renderAll();
+  });});
+
+  el("resetBtn").addEventListener("click",function(){ if(confirm("לאפס הכל?")){ state=JSON.parse(JSON.stringify(DEFAULT)); slip=[]; el("inTreat").value=state.goal.treat; el("inFun").value=state.goal.funAmount; el("inSave").value=state.goal.saveAmount; renderSlip(); markSelectedOdds(); renderAll(); }});
+
+  var nav=document.querySelectorAll(".navb");
+  for(var i=0;i<nav.length;i++) nav[i].addEventListener("click",function(){ switchScreen(this.getAttribute("data-scr")); });
+}
+init();
+</script>
+</body>
+</html>
