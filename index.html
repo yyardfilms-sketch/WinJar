@@ -22,7 +22,7 @@
 
   .topbar{position:sticky;top:0;z-index:30;background:rgba(7,10,14,.86);backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;}
-  .brand{font-weight:900;font-size:21px;letter-spacing:.4px;display:flex;align-items:center;gap:7px;}
+  .brand{font-weight:900;font-size:21px;letter-spacing:.4px;direction:ltr;}
   .brand b{color:var(--green);}
   .wallets{display:flex;gap:8px;}
   .wchip{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-weight:800;font-size:13px;}
@@ -80,6 +80,7 @@
 
   .crest{flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#fff;background-size:cover;background-position:center;}
   .crest.has-img{background-color:transparent!important;background-size:contain;background-repeat:no-repeat;color:transparent;}
+  .crest.flag{background-color:transparent!important;background-size:cover;color:transparent;box-shadow:inset 0 0 0 1px var(--line2);}
 
   .hint{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:18px 16px;color:var(--muted);font-size:14px;line-height:1.6;text-align:center;}
   .hint code{background:var(--bg2);color:var(--green);padding:2px 7px;border-radius:6px;font-size:13px;}
@@ -179,8 +180,7 @@
 
   <!-- MATCHES -->
   <div class="screen active" id="scrMatches">
-    <h3 class="sec"><span class="fire">🔥</span> משחקים חמים</h3>
-    <div class="hot" id="hot"></div>
+    <div id="liveWrap" style="display:none"><h3 class="sec"><span class="live"><span class="dot"></span></span> משחקים חיים עכשיו</h3><div class="hot" id="liveStrip"></div></div>
     <h3 class="sec">ליגות</h3>
     <div class="leagues" id="leagues"></div>
     <div class="mbar"><div id="liveStatus" class="status muted">טוען…</div><button class="refresh" id="refreshBtn">↻ רענן</button></div>
@@ -263,7 +263,7 @@ var PRETTY={soccer_epl:"Premier League",soccer_uefa_champs_league:"Champions Lea
 var FALLBACK=[{key:"soccer_epl",title:"Premier League"},{key:"soccer_spain_la_liga",title:"La Liga"},{key:"soccer_italy_serie_a",title:"Serie A"},{key:"soccer_germany_bundesliga",title:"Bundesliga"},{key:"soccer_france_ligue_one",title:"Ligue 1"},{key:"soccer_uefa_champs_league",title:"Champions League"},{key:"soccer_fifa_world_cup",title:"World Cup"},{key:"soccer_israel_ligat_haal",title:"Ligat ha'Al"}];
 var HOT_PREF=["soccer_uefa_champs_league","soccer_fifa_world_cup","soccer_epl","soccer_spain_la_liga","soccer_italy_serie_a"];
 // TheSportsDB leagues to harvest crests from (free), merged into one global map
-var CREST_LEAGUES=["English Premier League","Spanish La Liga","Italian Serie A","German Bundesliga","French Ligue 1","UEFA Champions League","Dutch Eredivisie","Portuguese Primeira Liga","English League Championship","Israeli Premier League"];
+var CREST_LEAGUES=["English Premier League","Spanish La Liga","Italian Serie A","German Bundesliga","French Ligue 1","UEFA Champions League","Dutch Eredivisie","Portuguese Primeira Liga","English League Championship","Israeli Premier League","Brazilian Serie A","American Major League Soccer","Mexican Liga MX","Turkish Super Lig","Belgian First Division A","Scottish Premiership","Greek Super League","Saudi Pro League"];
 
 var SKEY="winjar_v2", CKEY="winjar_cache_v2";
 var DEFAULT={predictions:[],funBalance:0,savingsBalance:0,goal:{funAmount:500,treat:"פינוק שבחרת",saveAmount:1000},redemptions:[]};
@@ -286,10 +286,12 @@ function hasLive(d){return (d||[]).some(isLive);}
 function shortTime(iso){var t=new Date(iso);return t.toLocaleString("he-IL",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"});}
 
 /* crests */
+var ISO={"germany":"de","spain":"es","france":"fr","england":"gb-eng","scotland":"gb-sct","wales":"gb-wls","northern ireland":"gb-nir","netherlands":"nl","belgium":"be","portugal":"pt","italy":"it","croatia":"hr","switzerland":"ch","poland":"pl","denmark":"dk","serbia":"rs","austria":"at","ukraine":"ua","czech republic":"cz","czechia":"cz","sweden":"se","norway":"no","turkey":"tr","turkiye":"tr","greece":"gr","russia":"ru","hungary":"hu","romania":"ro","ireland":"ie","slovakia":"sk","slovenia":"si","brazil":"br","argentina":"ar","uruguay":"uy","colombia":"co","chile":"cl","peru":"pe","ecuador":"ec","paraguay":"py","bolivia":"bo","venezuela":"ve","mexico":"mx","usa":"us","united states":"us","canada":"ca","costa rica":"cr","panama":"pa","honduras":"hn","jamaica":"jm","japan":"jp","south korea":"kr","korea republic":"kr","iran":"ir","saudi arabia":"sa","australia":"au","qatar":"qa","iraq":"iq","united arab emirates":"ae","uae":"ae","china":"cn","india":"in","morocco":"ma","senegal":"sn","tunisia":"tn","algeria":"dz","egypt":"eg","ghana":"gh","cameroon":"cm","nigeria":"ng","ivory coast":"ci","cote divoire":"ci","mali":"ml","south africa":"za","new zealand":"nz","israel":"il","cape verde":"cv","jordan":"jo","uzbekistan":"uz"};
+function countryISO(name){var k=String(name||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();return ISO[k]||null;}
 function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\b(fc|cf|afc|sc|ac|cd|ssc|as|us|rc|sv|bk|if|club|de)\b/g," ").replace(/[^a-z0-9]/g,"");}
 function initials(name){var w=String(name).replace(/[^A-Za-z\u00C0-\u024F\s]/g," ").trim().split(/\s+/).filter(Boolean);if(w.length>=2)return (w[0][0]+w[1][0]).toUpperCase();return String(name).replace(/\s/g,"").slice(0,2).toUpperCase();}
 function teamColor(name){var h=0,s=String(name);for(var i=0;i<s.length;i++)h=s.charCodeAt(i)+((h<<5)-h);return "hsl("+(Math.abs(h)%360)+",50%,40%)";}
-function crestHtml(name){return '<span class="crest" data-team="'+esc(name)+'" style="background-color:'+teamColor(name)+'">'+esc(initials(name))+'</span>';}
+function crestHtml(name){var iso=countryISO(name);if(iso)return '<span class="crest flag" style="background-image:url(https://flagcdn.com/w160/'+iso+'.png)"></span>';return '<span class="crest" data-team="'+esc(name)+'" style="background-color:'+teamColor(name)+'">'+esc(initials(name))+'</span>';}
 function crestMap(){return (cache.crest&&cache.crest.map)||{};}
 async function ensureCrests(){
   if(cache.crest&&fresh(cache.crest.ts,CREST_TTL_MIN)&&cache.crest.map&&Object.keys(cache.crest.map).length) return;
@@ -384,32 +386,6 @@ function avgH2H(match){var sums={},counts={};(match.bookmakers||[]).forEach(func
 function setStatus(cls,html){var s=el("liveStatus");s.className="status "+cls;s.innerHTML=html;}
 function creditTxt(){return cache.remaining!=null?" · "+cache.remaining+" קרדיטים":"";}
 
-/* ---------- hot carousel ---------- */
-async function loadHot(){
-  if(!API_KEY)return;
-  var inSeason=leagues.map(function(l){return l.key;});
-  var pick=HOT_PREF.filter(function(k){return inSeason.indexOf(k)>=0;}).slice(0,5);
-  if(!pick.length)pick=inSeason.slice(0,3);
-  for(var i=0;i<pick.length;i++){await fetchLeagueOdds(pick[i],false);}
-  renderHot(pick);
-}
-function renderHot(pick){
-  var now=Date.now(), horizon=now+48*3600*1000, items=[];
-  pick.forEach(function(lg){var e=cache.odds[lg];if(!e||!e.data)return;e.data.forEach(function(m){var t=new Date(m.commence_time).getTime();if(t<=horizon){items.push({lg:lg,m:m,t:t,live:t<now});}});});
-  items.sort(function(a,b){if(a.live!==b.live)return a.live?-1:1;return a.t-b.t;});
-  items=items.slice(0,12);
-  if(!items.length){el("hot").innerHTML='<div class="empty" style="padding:14px">אין משחקים חמים כרגע.</div>';return;}
-  el("hot").innerHTML=items.map(function(it){
-    var m=it.m,od=avgH2H(m);
-    function oc(out,name,lab){var p=od[name];if(!p)return '<div class="chip-odd" style="opacity:.4"><span class="lab">'+lab+'</span><span class="val">–</span></div>';return oddEl(m.id,"h2h",out,lab,m.home_team+" נגד "+m.away_team+" · "+(name==="Draw"?"תיקו":name),p.toFixed(2),"chip-odd");}
-    return '<div class="hotc" data-card-eid="'+esc(m.id)+'" data-card-lg="'+esc(it.lg)+'"><div class="hot-top"><span class="hot-lg">'+esc(leagueName(it.lg))+'</span>'+(it.live?'<span class="live"><span class="dot"></span>LIVE</span>':'<span class="gc-time">'+shortTime(m.commence_time)+'</span>')+'</div>'
-      +'<div class="hot-row">'+crestHtml(m.home_team)+'<span class="nm">'+esc(m.home_team)+'</span></div>'
-      +'<div class="hot-row">'+crestHtml(m.away_team)+'<span class="nm">'+esc(m.away_team)+'</span></div>'
-      +'<div class="hot-odds">'+oc("1",m.home_team,"1")+oc("X","Draw","X")+oc("2",m.away_team,"2")+'</div></div>';
-  }).join("");
-  applyCrests();markSelected();
-}
-
 /* ---------- league odds fetch (shared cache) ---------- */
 async function fetchLeagueOdds(league,force){
   var entry=cache.odds[league];
@@ -435,8 +411,9 @@ async function loadMatches(force){
   else{if(entry&&entry.data){renderMatches(entry.data);setStatus("muted","אופליין — מציג שמור · עודכן "+ago(entry.ts));}else setStatus("err",'הטעינה נכשלה. אם אתה בצ\'אט — <b>הורד ופתח בדפדפן</b>. אחרת בדוק מפתח/רשת.');}
 }
 function statusFor(league,cached){var e=cache.odds[league];if(!e)return;if(!e.data.length){setStatus("muted","אין משחקים קרובים ב"+leagueName(league)+".");return;}var lc=e.data.filter(isLive).length;setStatus("ok",e.data.length+" משחקים"+(lc?" · "+lc+" לייב🔴":"")+" · עודכן "+ago(e.ts)+(cached?" (שמור)":"")+creditTxt());}
-function oddEl(eid,mkt,out,label,price,cls){return '<button class="'+cls+'" data-eid="'+esc(eid)+'" data-mkt="'+mkt+'" data-out="'+esc(out)+'" data-label="'+esc(label)+'" data-odds="'+price+'"><span class="lab">'+esc(String(label).length>0?out:out)+'</span><span class="val tnum">'+price+'</span></button>';}
+function oddEl(eid,mkt,out,label,price,cls){return '<button class="'+cls+'" data-eid="'+esc(eid)+'" data-mkt="'+esc(mkt)+'" data-out="'+esc(out)+'" data-label="'+esc(label)+'" data-odds="'+price+'"><span class="lab">'+esc(out)+'</span><span class="val tnum">'+price+'</span></button>';}
 function renderMatches(data){
+  renderLiveStrip(data);
   var arr=data.slice().sort(function(a,b){var la=isLive(a),lb=isLive(b);if(la!==lb)return la?-1:1;return new Date(a.commence_time)-new Date(b.commence_time);});
   if(liveOnly)arr=arr.filter(isLive);
   if(!arr.length){el("matches").innerHTML='<div class="empty">'+(liveOnly?"אין משחקי לייב כרגע.":"אין משחקים להצגה.")+'</div>';return;}
@@ -447,6 +424,20 @@ function renderMatches(data){
       +'<div class="gc-row">'+crestHtml(m.home_team)+'<span class="nm">'+esc(m.home_team)+'</span></div>'
       +'<div class="gc-row">'+crestHtml(m.away_team)+'<span class="nm">'+esc(m.away_team)+'</span></div>'
       +'<div class="gc-odds">'+oc("1",m.home_team)+oc("X","Draw")+oc("2",m.away_team)+'</div></div>';
+  }).join("");
+  applyCrests();markSelected();
+}
+function renderLiveStrip(data){
+  var live=(data||[]).filter(isLive);
+  if(!live.length){el("liveWrap").style.display="none";el("liveStrip").innerHTML="";return;}
+  el("liveWrap").style.display="block";
+  el("liveStrip").innerHTML=live.slice(0,12).map(function(m){
+    var od=avgH2H(m);
+    function oc(out,name){var p=od[name];if(!p)return '<div class="chip-odd" style="opacity:.4"><span class="lab">'+out+'</span><span class="val">–</span></div>';return oddEl(m.id,"h2h",out,m.home_team+" נגד "+m.away_team+" · "+(name==="Draw"?"תיקו":name),p.toFixed(2),"chip-odd");}
+    return '<div class="hotc" data-card-eid="'+esc(m.id)+'" data-card-lg="'+esc(curLeague)+'"><div class="hot-top"><span class="live"><span class="dot"></span>LIVE</span><span class="hot-lg">'+esc(leagueName(curLeague))+'</span></div>'
+      +'<div class="hot-row">'+crestHtml(m.home_team)+'<span class="nm">'+esc(m.home_team)+'</span></div>'
+      +'<div class="hot-row">'+crestHtml(m.away_team)+'<span class="nm">'+esc(m.away_team)+'</span></div>'
+      +'<div class="hot-odds">'+oc("1",m.home_team)+oc("X","Draw")+oc("2",m.away_team)+'</div></div>';
   }).join("");
   applyCrests();markSelected();
 }
@@ -476,46 +467,68 @@ async function fetchEventOdds(league,eid){
   var c=cache.events[eid];var live=detailCtx&&detailCtx.match&&isLive(detailCtx.match);
   if(c&&fresh(c.ts,live?LIVE_TTL_MIN:EVENT_TTL_MIN)&&c.data)return c.data;
   try{
-    var res=await fetch("https://api.the-odds-api.com/v4/sports/"+league+"/events/"+eid+"/odds/?apiKey="+encodeURIComponent(API_KEY)+"&regions="+REGION+"&markets=h2h,totals,btts&oddsFormat=decimal");
+    var res=await fetch("https://api.the-odds-api.com/v4/sports/"+league+"/events/"+eid+"/odds/?apiKey="+encodeURIComponent(API_KEY)+"&regions="+REGION+"&markets=h2h,alternate_totals,btts,double_chance,draw_no_bet&oddsFormat=decimal");
     var rem=res.headers.get("x-requests-remaining");if(rem!=null)cache.remaining=parseInt(rem,10);
     if(!res.ok)return c?c.data:null;
     var data=await res.json();cache.events[eid]={ts:Date.now(),data:data};saveCache();return data;
   }catch(e){return c?c.data:null;}
 }
 function parseMarkets(ev){
-  var h2h={},totalsByPoint={},btts={};
-  (ev&&ev.bookmakers||[]).forEach(function(bk){(bk.markets||[]).forEach(function(mk){
-    if(mk.key==="h2h"){(mk.outcomes||[]).forEach(function(o){agg(h2h,o.name,o.price);});}
-    else if(mk.key==="totals"){(mk.outcomes||[]).forEach(function(o){var pt=String(o.point);if(!totalsByPoint[pt])totalsByPoint[pt]={Over:{s:0,n:0},Under:{s:0,n:0}};var slot=totalsByPoint[pt][o.name];if(slot){slot.s+=o.price;slot.n++;}});}
-    else if(mk.key==="btts"){(mk.outcomes||[]).forEach(function(o){agg(btts,o.name,o.price);});}
-  });});
+  var h2h={},totalsByPoint={},btts={},dc={},dnb={};
   function agg(obj,k,p){if(!obj[k])obj[k]={s:0,n:0};obj[k].s+=p;obj[k].n++;}
   function avg(slot){return slot&&slot.n?slot.s/slot.n:null;}
-  // pick main total line = most bookmakers
-  var mainPt=null,best=-1;Object.keys(totalsByPoint).forEach(function(pt){var n=(totalsByPoint[pt].Over.n+totalsByPoint[pt].Under.n);if(n>best){best=n;mainPt=pt;}});
-  var totals=null;if(mainPt){var o=avg(totalsByPoint[mainPt].Over),u=avg(totalsByPoint[mainPt].Under);if(o&&u)totals={point:mainPt,over:o,under:u};}
-  return {h2h:{home:avg(h2h[ev.home_team]),draw:avg(h2h["Draw"]),away:avg(h2h[ev.away_team])},totals:totals,btts:{yes:avg(btts["Yes"]),no:avg(btts["No"])}};
+  var home=ev.home_team,away=ev.away_team,nh=norm(home),na=norm(away);
+  (ev&&ev.bookmakers||[]).forEach(function(bk){(bk.markets||[]).forEach(function(mk){
+    var ms=mk.outcomes||[];
+    if(mk.key==="h2h"){ms.forEach(function(o){agg(h2h,o.name,o.price);});}
+    else if(mk.key==="alternate_totals"||mk.key==="totals"){ms.forEach(function(o){var pt=String(o.point);if(!totalsByPoint[pt])totalsByPoint[pt]={Over:{s:0,n:0},Under:{s:0,n:0}};var slot=totalsByPoint[pt][o.name];if(slot){slot.s+=o.price;slot.n++;}});}
+    else if(mk.key==="btts"){ms.forEach(function(o){agg(btts,o.name,o.price);});}
+    else if(mk.key==="draw_no_bet"){ms.forEach(function(o){agg(dnb,o.name,o.price);});}
+    else if(mk.key==="double_chance"){ms.forEach(function(o){var n=norm(o.name),hasH=n.indexOf(nh)>=0,hasA=n.indexOf(na)>=0,hasD=n.indexOf("draw")>=0;var key=hasH&&hasD?"1X":(hasA&&hasD?"X2":(hasH&&hasA?"12":null));if(key)agg(dc,key,o.price);});}
+  });});
+  // half-point totals only, sorted
+  var totals=[];Object.keys(totalsByPoint).forEach(function(pt){var pn=parseFloat(pt);if(Math.abs(pn*2-Math.round(pn*2))<1e-9 && Math.round(pn*2)%2===1){var o=avg(totalsByPoint[pt].Over),u=avg(totalsByPoint[pt].Under);if(o&&u)totals.push({point:pn,over:o,under:u});}});
+  totals.sort(function(a,b){return a.point-b.point;});
+  return {
+    h2h:{home:avg(h2h[home]),draw:avg(h2h["Draw"]),away:avg(h2h[away])},
+    dc:{"1X":avg(dc["1X"]),"12":avg(dc["12"]),"X2":avg(dc["X2"])},
+    dnb:{home:avg(dnb[home]),away:avg(dnb[away])},
+    totals:totals,
+    btts:{yes:avg(btts["Yes"]),no:avg(btts["No"])}
+  };
 }
 function detailMarketsHtml(m,ev){
   if(!ev)return '<div class="market"><div class="mkempty">לא הצלחנו לטעון יחסים. אם אתה בצ\'אט — הורד ופתח בדפדפן.</div></div>';
   var P=parseMarkets(ev),eid=ev.id,html="";
-  var home=ev.home_team,away=ev.away_team;
-  // 1X2 face-to-face
+  var home=ev.home_team,away=ev.away_team,vs=home+" נגד "+away;
+  function dead(lab){return '<div class="oddbtn" style="opacity:.4"><span class="lab">'+lab+'</span><span class="val">–</span></div>';}
+  // 1X2
   html+='<div class="market"><h4>תוצאת המשחק <span class="sub">1X2</span></h4><div class="mkrow c3">';
-  html+=P.h2h.home?oddEl(eid,"h2h","1",home+" — ניצחון בית",P.h2h.home.toFixed(2),"oddbtn"):'<div class="oddbtn" style="opacity:.4"><span class="lab">1</span><span class="val">–</span></div>';
-  html+=P.h2h.draw?oddEl(eid,"h2h","X",home+" נגד "+away+" · תיקו",P.h2h.draw.toFixed(2),"oddbtn"):'<div class="oddbtn" style="opacity:.4"><span class="lab">X</span><span class="val">–</span></div>';
-  html+=P.h2h.away?oddEl(eid,"h2h","2",away+" — ניצחון חוץ",P.h2h.away.toFixed(2),"oddbtn"):'<div class="oddbtn" style="opacity:.4"><span class="lab">2</span><span class="val">–</span></div>';
+  html+=P.h2h.home?oddEl(eid,"h2h","1",home+" — ניצחון בית",P.h2h.home.toFixed(2),"oddbtn"):dead("1");
+  html+=P.h2h.draw?oddEl(eid,"h2h","X",vs+" · תיקו",P.h2h.draw.toFixed(2),"oddbtn"):dead("X");
+  html+=P.h2h.away?oddEl(eid,"h2h","2",away+" — ניצחון חוץ",P.h2h.away.toFixed(2),"oddbtn"):dead("2");
   html+='</div></div>';
-  // Totals
-  if(P.totals){html+='<div class="market"><h4>סך שערים <span class="sub">קו '+P.totals.point+'</span></h4><div class="mkrow c2">'
-    +oddEl(eid,"totals","Over",home+" נגד "+away+" · מעל "+P.totals.point,P.totals.over.toFixed(2),"oddbtn").replace('class="lab">Over','class="lab">Over '+P.totals.point)
-    +oddEl(eid,"totals","Under",home+" נגד "+away+" · מתחת "+P.totals.point,P.totals.under.toFixed(2),"oddbtn").replace('class="lab">Under','class="lab">Under '+P.totals.point)
-    +'</div></div>';}
+  // Double chance
+  if(P.dc["1X"]||P.dc["12"]||P.dc["X2"]){html+='<div class="market"><h4>צ׳אנס כפול <span class="sub">Double Chance</span></h4><div class="mkrow c3">';
+    html+=P.dc["1X"]?oddEl(eid,"dc","1X",vs+" · בית או תיקו",P.dc["1X"].toFixed(2),"oddbtn"):dead("1X");
+    html+=P.dc["12"]?oddEl(eid,"dc","12",vs+" · בית או חוץ",P.dc["12"].toFixed(2),"oddbtn"):dead("12");
+    html+=P.dc["X2"]?oddEl(eid,"dc","X2",vs+" · תיקו או חוץ",P.dc["X2"].toFixed(2),"oddbtn"):dead("X2");
+    html+='</div></div>';}
+  // Draw no bet
+  if(P.dnb.home&&P.dnb.away){html+='<div class="market"><h4>הימור ללא תיקו <span class="sub">DNB</span></h4><div class="mkrow c2">'
+    +oddEl(eid,"dnb","בית",home+" · ללא תיקו",P.dnb.home.toFixed(2),"oddbtn")
+    +oddEl(eid,"dnb","חוץ",away+" · ללא תיקו",P.dnb.away.toFixed(2),"oddbtn")+'</div></div>';}
+  // Over/Under all lines
+  if(P.totals.length){html+='<div class="market"><h4>סך שערים <span class="sub">Over / Under</span></h4>';
+    P.totals.forEach(function(t){var pt=t.point;html+='<div class="mkrow c2" style="margin-bottom:8px">'
+      +oddEl(eid,"tot_"+pt,"מעל "+pt,vs+" · מעל "+pt+" שערים",t.over.toFixed(2),"oddbtn")
+      +oddEl(eid,"tot_"+pt,"מתחת "+pt,vs+" · מתחת "+pt+" שערים",t.under.toFixed(2),"oddbtn")+'</div>';});
+    html+='</div>';}
   // BTTS
   if(P.btts.yes&&P.btts.no){html+='<div class="market"><h4>שתי הקבוצות יבקיעו <span class="sub">BTTS</span></h4><div class="mkrow c2">'
-    +oddEl(eid,"btts","Yes",home+" נגד "+away+" · שתיהן יבקיעו: כן",P.btts.yes.toFixed(2),"oddbtn")
-    +oddEl(eid,"btts","No",home+" נגד "+away+" · שתיהן יבקיעו: לא",P.btts.no.toFixed(2),"oddbtn")+'</div></div>';}
-  if(!P.totals&&!(P.btts.yes&&P.btts.no))html+='<div class="market"><div class="mkempty">למשחק הזה זמין כרגע רק שוק 1X2.</div></div>';
+    +oddEl(eid,"btts","כן",vs+" · שתיהן יבקיעו: כן",P.btts.yes.toFixed(2),"oddbtn")
+    +oddEl(eid,"btts","לא",vs+" · שתיהן יבקיעו: לא",P.btts.no.toFixed(2),"oddbtn")+'</div></div>';}
+  html+='<div class="mkempty" style="font-size:11px;padding:2px">תוצאה מדויקת / מבקיע ראשון אינם זמינים ב-API החינמי.</div>';
   return html;
 }
 
@@ -532,10 +545,10 @@ async function init(){
   renderLeagues();renderAll();renderSlip();applyCrests();
 
   el("leagues").addEventListener("click",function(e){var b=e.target.closest("[data-lg]");if(!b)return;curLeague=b.getAttribute("data-lg");renderLeagues();loadMatches(false);});
-  el("refreshBtn").addEventListener("click",function(){loadMatches(true);loadHot();});
+  el("refreshBtn").addEventListener("click",function(){loadMatches(true);});
   el("matches").addEventListener("click",function(e){if(e.target.closest("[data-eid]"))return onOddClick(e);var c=e.target.closest("[data-card-eid]");if(c)openDetail(c.getAttribute("data-card-eid"),c.getAttribute("data-card-lg"));});
-  el("hot").addEventListener("click",function(e){if(e.target.closest("[data-eid]"))return onOddClick(e);var c=e.target.closest("[data-card-eid]");if(c)openDetail(c.getAttribute("data-card-eid"),c.getAttribute("data-card-lg"));});
   el("detContent").addEventListener("click",onOddClick);
+  el("liveStrip").addEventListener("click",function(e){if(e.target.closest("[data-eid]"))return onOddClick(e);var c=e.target.closest("[data-card-eid]");if(c)openDetail(c.getAttribute("data-card-eid"),c.getAttribute("data-card-lg"));});
   el("detBack").addEventListener("click",function(){switchScreen("scrMatches");});
 
   Array.prototype.forEach.call(document.querySelectorAll(".seg .segb"),function(){});
@@ -557,7 +570,6 @@ async function init(){
   ensureCrests();           // harvest crests (free, background)
   await loadSports();       // in-season leagues (free)
   await loadMatches(false); // selected league
-  loadHot();                // hot games carousel
 }
 init();
 </script>
